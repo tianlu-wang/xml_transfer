@@ -74,13 +74,44 @@ class LTFDocument(Tree):
     lang : lang
         Document language.
     """
-    def __init__(self, xmlf, new):
-        if new is False:
+    def __init__(self, xmlf, segment=None, doc_id=None):
+        def xor(a, b):
+            return a + b == 1
+        assert(xor(xmlf is not None, segment is not None))
+        if not xmlf is None:
             tree = etree.parse(xmlf)
-            super(LTFDocument, self).__init__(tree)
         else:
-            tree = etree.parse('./data/ltf_template.xml')
-            super(LTFDocument, self).__init__(tree)
+            base_xml = """<?xml version='1.0' encoding='UTF-8'?>
+                          <!DOCTYPE LCTL_TEXT SYSTEM "ltf.v1.5.dtd">
+                          <LCTL_TEXT/>
+                       """
+
+            # base_xml = """<?xml version='1.0' encoding='UTF-8'?>
+            #               <!DOCTYPE LCTL_TEXT SYSTEM "ltf.v1.5.dtd">
+            #               <LCTL_TEXT/>
+            #            """
+            # Create and set attributes on root node.
+            tree = etree.parse(StringIO.StringIO(base_xml))
+            root = tree.getroot()
+
+            # Create and set attributes on doc node.
+            doc = etree.SubElement(root, 'DOC')
+            doc.set('id', doc_id)
+
+            text = etree.SubElement(doc, 'TEXT')
+            seg = etree.SubElement(text, 'SEG')
+            text.replace(seg, segment)
+            # seg.set('id', segment.get('id'))
+            # seg.set('start_char', segment.get('start_char'))
+            # seg.set('end_char', segment.get('end_char'))
+            # original_text = etree.SubElement(seg, 'ORIGINAL_TEXT')
+            # original_text.text = segment.find('ORIGINAL_TEXT').text
+            # tokens = segment.xpath('.//TOKEN')
+            # seg.extend(tokens)
+            # print etree.tostring(tree, pretty_print=True)
+
+
+        super(LTFDocument, self).__init__(tree)
 
     def segments(self):
         """Lazily generate segments present in LTF document.
@@ -206,6 +237,17 @@ class LAFDocument(Tree):
 
         super(LAFDocument, self).__init__(tree)
 
+    def annotations(self):
+        """Lazily generate annotations present in LAF document.
+
+        Outputs
+        -------
+        annotations : lxml.etree.ElementTree generator
+            Generator for annotations, each represented by an ElementTree.
+        """
+        for annotation in self.tree.xpath('//ANNOTATION'):
+            yield annotation
+
     def mentions(self):
         """Extract mentions.
 
@@ -235,7 +277,7 @@ class LAFDocument(Tree):
         return mentions
 
 
-def load_doc(xmlf, cls, new=False):
+def load_doc(xmlf, cls):
     """Parse xml file and return document.
 
     This is a helper function intended to help debugging.
@@ -253,13 +295,8 @@ def load_doc(xmlf, cls, new=False):
     """
     try:
         print xmlf
-        # assert(os.path.exists(xmlf))
-        if not os.path.exists(xmlf):
-            f = open(xmlf, 'w+')
-            doc = cls(xmlf, new)
-            f.close()
-        else:
-            doc = cls(xmlf, new)
+        assert(os.path.exists(xmlf))
+        doc = cls(xmlf)
     except KeyError:
         doc = None
     return doc
@@ -271,12 +308,21 @@ if __name__ == '__main__':
     laf_split_result_path = './data/laf_split_result'
 
     ltf_doc = load_doc(ltf_path, LTFDocument)
+    laf_doc = load_doc(laf_path, LAFDocument)
     segments = ltf_doc.segments()
+    annotations = laf_doc.annotations()
     for segment in segments:
-        ltf_temp = load_doc(ltf_split_result_path+'/NW_AMI_HAU_006001_20141128'+'_'+segment.get('id')+'ltf.xml', LTFDocument, True)
-        ltf_temp.tree.xpath('DOC')[0][0][0] = segment
+        print type(segment)
+        ltff = ltf_split_result_path+'/NW_AMI_HAU_006001_20141128'+'_'+segment.get('id')+'.'+'ltf.xml'
+        laff = laf_split_result_path+'/NW_AMI_HAU_006001_20141128'+'_'+segment.get('id')+'.'+'laf.xml'
+        ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=ltf_doc.doc_id+segment.get('id'))
+        ltf_temp.write_to_file(ltff)
+        for annotation in annotations:
+        #     if :
+        #     else:
 
-        ltf_temp.write_to_file
+
+
 
 
 
