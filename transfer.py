@@ -315,7 +315,7 @@ if __name__ == '__main__':
         # print '============'
         ltff = ltf_split_result_path+'/NW_AMI_HAU_006001_20141128'+'_'+segment.get('id')+'.'+'ltf.xml'
         laff = laf_split_result_path+'/NW_AMI_HAU_006001_20141128'+'_'+segment.get('id')+'.'+'laf.xml'
-        ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=ltf_doc.doc_id+segment.get('id'))
+        ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=ltf_doc.doc_id+'_'+segment.get('id'))
         ltf_temp.write_to_file(ltff)
 
         #######for debug
@@ -345,7 +345,7 @@ if __name__ == '__main__':
             print i
             print 'start' + start_char + 'end' + end_char
             print 'sstart' + segment.get('start_char') + 'send' + segment.get('end_char')
-            if start_char >= segment.get('start_char') and end_char <= segment.get('end_char'):
+            if int(start_char) >= int(segment.get('start_char')) and int(end_char) <= int(segment.get('end_char')):
                 print 'OK'
                 entity_id = annotation.get('id')
                 type = annotation.get('type')
@@ -364,8 +364,9 @@ if __name__ == '__main__':
                 pass
             i += 1
         print mentions
-        laf_temp = LAFDocument(xmlf=None, mentions=mentions, lang=laf_doc.lang, doc_id=ltf_doc.doc_id+segment.get('id'))
+        laf_temp = LAFDocument(xmlf=None, mentions=mentions, lang=laf_doc.lang, doc_id=ltf_doc.doc_id+'_'+segment.get('id'))
         laf_temp.write_to_file(laff)
+        print laf_temp.mentions()
         j+=1
 
 
