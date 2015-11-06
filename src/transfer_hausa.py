@@ -1,4 +1,8 @@
-__author__ = 'koala'
+#-*- coding: utf-8 -*-
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+import sys
 import os
 import StringIO
 
@@ -254,25 +258,43 @@ def load_doc(xmlf, cls):
     return doc
 
 if __name__ == '__main__':
-    ltf_split_result_path = './data/hausa_test/split'
-    ltf_dir = './data/hausa_test/test'
-    ltf_files = []
-    for root, dirs, files in os.walk(ltf_dir):
-        for f in files:
-            if f.find('ltf') > 0:
-                temp = ltf_dir+'/'+f
-                ltf_files.append(temp)
+    if len(sys.argv) != 4:
+        print 'USAGE: python transfer_hausa.py ltf_or_laf <input dir> <output dir>'
+    else:
+        flag = sys.argv[1]
+        indir = sys.argv[2]
+        outdir = sys.argv[3]
+        lxf_files = []
+        for root, dirs, files in os.walk(indir):
+            for f in files:
+                if flag == 'ltf':
+                    if f.find('ltf') > 0:
+                        temp = indir+'/'+f
+                        lxf_files.append(temp)
+                elif flag == 'laf':
+                    if f.find('laf') > 0:
+                        temp = indir+'/'+f
+                        lxf_files.append(temp)
 
-    for k in range(len(ltf_files)):
-        print 'k: ' + str(k)
-        ltf_path = ltf_files[k]
-        ltf_doc = load_doc(ltf_path, LTFDocument)
-        segments = ltf_doc.segments()   # load the ltf and laf files and the segments in ltf file
-        j = 0
-        for segment in segments:
-            ltff = ltf_split_result_path+'/'+ ltf_doc.doc_id +'_'+segment.get('id')+'.'+'ltf.xml'
-            ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=ltf_doc.doc_id+'_'+segment.get('id'))
-            ltf_temp.write_to_file(ltff)
+        for k in range(len(lxf_files)):
+            print 'k: ' + str(k)
+            lxf_path = lxf_files[k]
+            if flag == 'ltf':
+                lxf_doc = load_doc(lxf_path, LTFDocument)
+            elif flag == 'laf':
+                lxf_doc = load_doc(lxf_path, LAFDocument)
+            segments = lxf_doc.segments()   # load the ltf and laf files and the segments in ltf file
+            j = 0
+            for segment in segments:
+                if flag == 'ltf':
+                    ltff = outdir+'/'+ segment.get('id')+'.'+'ltf.xml'
+                    ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id= segment.get('id'))
+                    ltf_temp.write_to_file(ltff)
+                elif flag == 'laf':
+                    laff = outdir+'/'+ segment.get('id')+'.'+'laf.xml'
+                    laf_temp = LAFDocument(xmlf=None, segment=segment, doc_id= segment.get('id'))
+                    laf_temp.write_to_file(laff)
+
 
 
                 
