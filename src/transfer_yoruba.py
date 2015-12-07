@@ -1,7 +1,10 @@
-__author__ = 'koala'
+#-*- coding: utf-8 -*-
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+import sys
 import os
 import StringIO
-
 from lxml import etree
 
 
@@ -285,76 +288,83 @@ def load_doc(xmlf, cls):
     return doc
 
 if __name__ == '__main__':
-    ltf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/ltf_split'
-    laf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/laf_split'
+    if len(sys.argv) != 4:
+        print 'USAGE: python transfer_yoruba.py <input dir> <ltf_split file> <laf_split file>'
+        print 'this script will split LDC ltf and laf document file to sentences, it is suitable for yoruba and tamil'
+    else:
+        indir = sys.argv[1]
+        ltf_split_result_path = sys.argv[2]
+        laf_split_result_path = sys.argv[3]
+    # ltf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/ltf_split'
+    # laf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/laf_split'
 
-    ltf_dir = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone'
-    laf_dir = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone'
-    ltf_files = []
-    laf_files = []
-    for root, dirs, files in os.walk(ltf_dir):
-        for f in files:
-            if f.find('ltf') > 0:
-                temp = ltf_dir+'/'+f
-                ltf_files.append(temp)
-                laf_files.append(temp.replace('ltf', 'laf'))  # search every file in ltf and laf
+        ltf_dir = indir
+        laf_dir = indir
+        ltf_files = []
+        laf_files = []
+        for root, dirs, files in os.walk(ltf_dir):
+            for f in files:
+                if f.find('ltf') > 0:
+                    temp = ltf_dir+'/'+f
+                    ltf_files.append(temp)
+                    laf_files.append(temp.replace('ltf', 'laf'))  # search every file in ltf and laf
 
-    for k in range(len(ltf_files)):
-    # for k in range(1):
-        print 'k: ' + str(k)
-        ltf_path = ltf_files[k]
-        laf_path = laf_files[k]
-        ltf_doc = load_doc(ltf_path, LTFDocument)
-        laf_doc = load_doc(laf_path, LAFDocument)
-        segments = ltf_doc.segments()   # load the ltf and laf files and the segments in ltf file
-        j = 0
-        for segment in segments:
-            print 'j: ' + str(j)
-            ltff = ltf_split_result_path+'/'+segment.get('id')+'.'+'ltf.xml'
-            laff = laf_split_result_path+'/'+segment.get('id')+'.'+'laf.xml'
-            ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=segment.get('id'))
-            ltf_temp.write_to_file(ltff)  # finish ltf file
+        for k in range(len(ltf_files)):
+        # for k in range(1):
+            print 'k: ' + str(k)
+            ltf_path = ltf_files[k]
+            laf_path = laf_files[k]
+            ltf_doc = load_doc(ltf_path, LTFDocument)
+            laf_doc = load_doc(laf_path, LAFDocument)
+            segments = ltf_doc.segments()   # load the ltf and laf files and the segments in ltf file
+            j = 0
+            for segment in segments:
+                print 'j: ' + str(j)
+                ltff = ltf_split_result_path+'/'+segment.get('id')+'.'+'ltf.xml'
+                laff = laf_split_result_path+'/'+segment.get('id')+'.'+'laf.xml'
+                ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=segment.get('id'))
+                ltf_temp.write_to_file(ltff)  # finish ltf file
 
-            mentions = []
-            i = 0
-            annotations = laf_doc.annotations()
-            for annotation in annotations:
-                start_char = -1
-                end_char = -1
-                start_token = annotation.get('start_token')
-                end_token = annotation.get('end_token')
-                for token_ in segment.xpath('.//TOKEN'):
-                    tmp = token_.get('id')
-                    if start_token == tmp:
-                        start_char = token_.get('start_char')
-                    if end_token == tmp:
-                        end_char = token_.get('end_char')
+                mentions = []
+                i = 0
+                annotations = laf_doc.annotations()
+                for annotation in annotations:
+                    start_char = -1
+                    end_char = -1
+                    start_token = annotation.get('start_token')
+                    end_token = annotation.get('end_token')
+                    for token_ in segment.xpath('.//TOKEN'):
+                        tmp = token_.get('id')
+                        if start_token == tmp:
+                            start_char = token_.get('start_char')
+                        if end_token == tmp:
+                            end_char = token_.get('end_char')
 
-                ########
-                if start_char > -1 and end_char == -1:
-                    print 'find wrong start char'
-                if end_char > -1 and start_char == -1:
-                    print 'find wrong end char'
-                ############
-                if end_char > start_char > -1:
-                    print 'start char' + str(start_char) + 'end char' + str(end_char)
-                    entity_id = annotation.get('id')
-                    type = annotation.get('type')
-                    extent = annotation.xpath('EXTENT')[0]
-                    extent_text = extent.text
+                    ########
+                    if start_char > -1 and end_char == -1:
+                        print 'find wrong start char'
+                    if end_char > -1 and start_char == -1:
+                        print 'find wrong end char'
+                    ############
+                    if end_char > start_char > -1:
+                        print 'start char' + str(start_char) + 'end char' + str(end_char)
+                        entity_id = annotation.get('id')
+                        type = annotation.get('type')
+                        extent = annotation.xpath('EXTENT')[0]
+                        extent_text = extent.text
 
-                    mention = [entity_id,
-                               type,
-                               extent_text,
-                               start_char,
-                               end_char]
-                    mentions.append(mention)
-                else:
-                    pass
-                i += 1
-            laf_temp = LAFDocument(xmlf=None, mentions=mentions, lang=laf_doc.lang, doc_id=segment.get('id'))
-            laf_temp.write_to_file(laff)
-            j += 1
+                        mention = [entity_id,
+                                   type,
+                                   extent_text,
+                                   start_char,
+                                   end_char]
+                        mentions.append(mention)
+                    else:
+                        pass
+                    i += 1
+                laf_temp = LAFDocument(xmlf=None, mentions=mentions, lang=laf_doc.lang, doc_id=segment.get('id'))
+                laf_temp.write_to_file(laff)
+                j += 1
 
 
 

@@ -258,44 +258,82 @@ def load_doc(xmlf, cls):
     return doc
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print 'USAGE: python transfer_hausa.py ltf_or_laf <input dir> <output dir>'
-        print 'split document to sentences for hausa and turkeish'
+    if len(sys.argv) != 5:
+        print 'USAGE: python trans_hau.py <ltf dir> <laf dir><ltf_split file> <laf_split file>'
+        print 'this script will split LDC ltf and laf document file to sentences, it is suitable for yoruba and tamil'
     else:
-        flag = sys.argv[1]
-        indir = sys.argv[2]
-        outdir = sys.argv[3]
-        lxf_files = []
-        for root, dirs, files in os.walk(indir):
-            for f in files:
-                if flag == 'ltf':
-                    if f.find('ltf') > 0:
-                        temp = indir+'/'+f
-                        lxf_files.append(temp)
-                elif flag == 'laf':
-                    if f.find('laf') > 0:
-                        temp = indir+'/'+f
-                        lxf_files.append(temp)
+        ltf_dir = sys.argv[1]
+        laf_dir = sys.argv[2]
+        ltf_split_result_path = sys.argv[3]
+        laf_split_result_path = sys.argv[4]
+    # ltf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/ltf_split'
+    # laf_split_result_path = './data/Yoruba_data/annotation/entity_annotation/simple/with_tone/laf_split'
 
-        for k in range(len(lxf_files)):
+
+        ltf_files = []
+        laf_files = []
+        for root, dirs, files in os.walk(ltf_dir):
+            for f in files:
+                print f
+                if f.find('ltf') > 0:
+                    temp = ltf_dir+'/'+f
+                    ltf_files.append(temp)
+                    laf_files.append(temp.replace('ltf', 'laf'))  # search every file in ltf and laf
+        print ltf_files
+        for k in range(len(ltf_files)):
+        # for k in range(1):
             print 'k: ' + str(k)
-            lxf_path = lxf_files[k]
-            if flag == 'ltf':
-                lxf_doc = load_doc(lxf_path, LTFDocument)
-            elif flag == 'laf':
-                lxf_doc = load_doc(lxf_path, LAFDocument)
-            segments = lxf_doc.segments()   # load the ltf and laf files and the segments in ltf file
+            ltf_path = ltf_files[k]
+            laf_path = laf_files[k]
+            ltf_doc = load_doc(ltf_path, LTFDocument)
+            laf_doc = load_doc(laf_path, LAFDocument)
+            segments = ltf_doc.segments()   # load the ltf and laf files and the segments in ltf file
             j = 0
+            doc_id = ltf_doc.doc_id
             for segment in segments:
-                doc_id = lxf_doc.doc_id
-                if flag == 'ltf':
-                    ltff = outdir+'/'+ doc_id +'_'+segment.get('id')+'.'+'ltf.xml'
-                    ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id= doc_id +'_'+segment.get('id'))
-                    ltf_temp.write_to_file(ltff)
-                elif flag == 'laf':
-                    laff = outdir+'/'+ doc_id +'_'+segment.get('id')+'.'+'laf.xml'
-                    laf_temp = LAFDocument(xmlf=None, segment=segment, doc_id= doc_id +'_'+segment.get('id'))
-                    laf_temp.write_to_file(laff)
+                print 'j: ' + str(j)
+                ltff = ltf_split_result_path+'/'+doc_id +'_'+segment.get('id')+'.'+'ltf.xml'
+                laff = laf_split_result_path+'/'+doc_id +'_'+segment.get('id')+'.'+'laf.xml'
+                ltf_temp = LTFDocument(xmlf=None, segment=segment, doc_id=doc_id +'_'+segment.get('id'))
+                ltf_temp.write_to_file(ltff)  # finish ltf file
+
+                mentions = []
+                i = 0
+                ltf_start_char = segment.get('start_char')
+                ltf_end_char = segment.get('end_char')
+                annotations = laf_doc.annotations()
+                for annotation in annotations:
+                    laf_start_char = annotation.xpath('EXTENT')[0].get('start_char')
+                    laf_end_char = annotation.xpath('EXTENT')[0].get('end_char')
+                    ########
+                    # if start_char > -1 and end_char == -1:
+                    #     print 'find wrong start char'
+                    # if end_char > -1 and start_char == -1:
+                    #     print 'find wrong end char'
+                    ############
+                    if int(ltf_end_char)>=int(laf_end_char) and int(ltf_start_char) <= int(laf_start_char):
+                        print 'this is ltf_start_char'+ltf_start_char
+                        print 'this is ltf_end_char'+ltf_end_char
+                        print 'this is laf_start_char'+ laf_start_char
+                        print 'this is laf_end_char'+ laf_end_char
+                        #print 'start char' + str(start_char) + 'end char' + str(end_char)
+                        entity_id = annotation.get('id')
+                        type = annotation.get('type')
+                        extent = annotation.xpath('EXTENT')[0]
+                        extent_text = extent.text
+
+                        mention = [entity_id,
+                                   type,
+                                   extent_text,
+                                   laf_start_char,
+                                   laf_end_char]
+                        mentions.append(mention)
+                    else:
+                        pass
+                    i += 1
+                laf_temp = LAFDocument(xmlf=None, mentions=mentions, lang=laf_doc.lang, doc_id=doc_id +'_'+segment.get('id'))
+                laf_temp.write_to_file(laff)
+                j += 1
 
 
 
